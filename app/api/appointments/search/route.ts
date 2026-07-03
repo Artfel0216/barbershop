@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
 
   const appointments = await prisma.appointment.findMany({
     where,
+    select: { id: true, name: true, date: true, time: true, service: true, status: true },
     orderBy: { date: "desc" },
     take: 50,
   })

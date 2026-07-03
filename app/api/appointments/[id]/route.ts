@@ -2,17 +2,20 @@ import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { validateToken, extractToken } from "@/lib/auth"
 import { generateTimeSlots } from "@/lib/slots"
-import { SERVICES, ServiceKey } from "@/lib/services"
+import { SERVICES, ServiceKey, getServiceDuration } from "@/lib/services"
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const token = extractToken(request)
   const isAdmin = token && validateToken(token)
   const { id } = await params
 
+  const appointmentId = Number(id)
+  if (!Number.isFinite(appointmentId)) return Response.json({ error: "Invalid id" }, { status: 400 })
+
   const body = await request.json()
   const { time, status, barberId, service, name, phone } = body
 
-  const appointment = await prisma.appointment.findUnique({ where: { id: Number(id) } })
+  const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } })
   if (!appointment) {
     return Response.json({ error: "Not found" }, { status: 404 })
   }
@@ -23,7 +26,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return Response.json({ error: "Invalid token" }, { status: 401 })
     }
     const updated = await prisma.appointment.update({
-      where: { id: Number(id) },
+      where: { id: appointmentId },
       data: { status: "cancelled" },
     })
     return Response.json(updated)
@@ -37,7 +40,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (time !== undefined) {
     if (!/^\d{2}:\d{2}$/.test(time)) return Response.json({ error: "Invalid time" }, { status: 400 })
-    const allSlots = generateTimeSlots(appointment.service)
+    const serviceForSlots = service ?? appointment.service
+    const allSlots = generateTimeSlots(serviceForSlots)
     if (!allSlots.includes(time)) return Response.json({ error: "Invalid slot" }, { status: 400 })
     updateData.time = time
   }
@@ -47,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
     updateData.status = status
   }
-  if (barberId !== undefined) updateData.barberId = barberId || null
+  if (barberId !== undefined) updateData.barberId = barberId ?? null
   if (service !== undefined) {
     if (!(service in SERVICES)) return Response.json({ error: "Invalid service" }, { status: 400 })
     updateData.service = service as ServiceKey
@@ -56,7 +60,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (phone !== undefined) updateData.phone = phone
 
   const updated = await prisma.appointment.update({
-    where: { id: Number(id) },
+    where: { id: appointmentId },
     data: updateData,
   })
   return Response.json(updated)

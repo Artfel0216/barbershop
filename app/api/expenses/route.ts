@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { validateToken, extractToken } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
+  const token = extractToken(request)
+  if (!token || !validateToken(token)) return Response.json({ error: "Unauthorized" }, { status: 401 })
+
   const date = request.nextUrl.searchParams.get("date")
   const where = date ? { date: new Date(date) } : {}
   const expenses = await prisma.expense.findMany({

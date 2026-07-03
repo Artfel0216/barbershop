@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { getServiceLabel } from "@/lib/services"
+import { getServiceLabel, getServiceDuration } from "@/lib/services"
 
 export async function GET(
   _request: Request,
@@ -15,11 +15,13 @@ export async function GET(
   }
 
   const [y, m, d] = appointment.date.toISOString().split("T")[0].split("-")
-  const [hh, mm] = appointment.time.split(":")
-  const start = `${y}${m}${d}T${hh}${mm}00`
-  const endHour = String(Number(hh)).padStart(2, "0")
-  const endMin = String(Number(mm) + 30).padStart(2, "0")
-  const end = `${y}${m}${d}T${endHour}${endMin}00`
+  const [hh, mm] = appointment.time.split(":").map(Number)
+  const start = `${y}${m}${d}T${String(hh).padStart(2, "0")}${String(mm).padStart(2, "0")}00`
+  const duration = getServiceDuration(appointment.service)
+  const totalEnd = hh * 60 + mm + duration
+  const endHour = Math.floor(totalEnd / 60)
+  const endMin = totalEnd % 60
+  const end = `${y}${m}${d}T${String(endHour).padStart(2, "0")}${String(endMin).padStart(2, "0")}00`
 
   const ics = [
     "BEGIN:VCALENDAR",

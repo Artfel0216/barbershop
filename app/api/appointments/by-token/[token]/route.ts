@@ -20,9 +20,13 @@ export async function PATCH(
     return Response.json({ error: "Already cancelled" }, { status: 400 })
   }
 
+  if (status !== undefined && status !== "cancelled") {
+    return Response.json({ error: "Invalid status" }, { status: 400 })
+  }
+
   const updated = await prisma.appointment.update({
     where: { id: appointment.id },
-    data: { status: status ?? "cancelled" },
+    data: { status: "cancelled" },
   })
 
   return Response.json(updated)
