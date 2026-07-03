@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Appointment {
+  id        Int               @id @default(autoincrement())
+  name      String
+  phone     String            @default("")
+  date      DateTime          @db.Date
+  time      String
+  service   Service           @default(haircut)
+  barberId  Int?
+  status    AppointmentStatus @default(scheduled)
+  cancelToken String?
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  barber Barber? @relation(fields: [barberId], references: [id])
+
+  @@map("appointments")
+}
+
+model Barber {
+  id        Int           @id @default(autoincrement())
+  name      String        @unique
+  commission Int          @default(100)
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now()) @map("created_at")
+  appointments Appointment[]
+
+  @@map("barbers")
+}
+
+model BlockedDay {
+  id     Int      @id @default(autoincrement())
+  date   DateTime @db.Date
+  reason String   @default("")
+
+  @@unique([date])
+  @@map("blocked_days")
+}
+
+model Product {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Int
+  cost      Int      @default(0)
+  stock     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  sales     Sale[]
+
+  @@map("products")
+}
+
+model Sale {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  quantity  Int      @default(1)
+  total     Int
+  date      DateTime @default(now()) @db.Date
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("sales")
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  description String
+  amount      Int
+  category    String   @default("geral")
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("expenses")
+}
+
+enum Service {
+  haircut
+  beard
+  eyebrows
+  haircut_beard
+  haircut_eyebrows
+  beard_eyebrows
+  haircut_beard_eyebrows
+  haircut_luzes
+  haircut_reflexo
+  haircut_platinado
+}
+
+enum AppointmentStatus {
+  scheduled
+  completed
+  cancelled
+  no_show
+}
